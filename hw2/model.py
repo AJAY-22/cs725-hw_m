@@ -50,10 +50,19 @@ class LitGenericClassifier(pl.LightningModule):
         gradient and update weights by calling `optim.step()`. You just need to return the `loss`
         appropriately. We log these values every step so that it is easier to compare various runs.
         """
-        loss = ...
-        acc = ...
+        X, Y = batch
+        
+        y_pred = self.model(X)
+        loss = self.loss_func(y_pred, Y) 
+        
+        y_pred = torch.argmax(y_pred, dim=1)
+        correct = (y_pred == Y).sum().item()
+        total = Y.size(0)
+        acc = correct / total
+        
         self.log('train_loss', loss.item())
         self.log('train_acc', acc)
+        
         return loss
 
     def validation_step(self, batch, batch_idx=0):
@@ -81,10 +90,19 @@ class LitGenericClassifier(pl.LightningModule):
           These values will be useful for you to assess overfitting and help you determine which model
         to submit on the leaderboard and in the final submission.
         """
-        loss = ...
-        acc = ...
+        X, Y = batch
+        
+        y_pred = self.model(X)
+        loss = self.loss_func(y_pred, Y) 
+
+        y_pred = torch.argmax(y_pred, dim=1)
+        correct = (y_pred == Y).sum().item()
+        total = Y.size(0)
+        acc = correct / total
+
         self.log('valid_loss', loss)
         self.log('valid_acc', acc)
+        
         return {
             'valid_loss': loss,
             'valid_acc': acc,
@@ -116,10 +134,20 @@ class LitGenericClassifier(pl.LightningModule):
         evaluating your model. You can simply copy over the code from `validation_step` into this if 
         you wish. Just ensure that this calculation is correct.
         """
-        loss = ...
-        acc = ...
+        X = batch[0]
+        Y = batch[1]
+        
+        y_pred = self.model(X)
+        loss = self.loss_func(y_pred, Y) 
+
+        y_pred = torch.argmax(y_pred, dim=1)
+        correct = (y_pred == Y).sum().item()
+        total = Y.size(0)
+        acc = correct / total
+
         self.log('test_loss', loss)
         self.log('test_acc', acc)
+        
         return {
             'test_loss': loss,
             'test_acc': loss,
@@ -143,43 +171,62 @@ class LitGenericClassifier(pl.LightningModule):
         `y_pred`: `torch.LongTensor` of size (B,) such that `y_pred[i]` for 0 <= i < B is the label
         predicted by the classifier for `x[i]`
         """
-        y_pred = ...
+        y_pred = self.model(x)
+        y_pred = torch.argmax(y_pred, dim=1)
         return y_pred
 
 class LitSimpleClassifier(LitGenericClassifier):
     def __init__(self, lr=0):
         super().__init__(lr=lr)
         self.model = nn.Sequential(
-            nn.Linear(2, ...), # d = 2
-            ..., # build your model here using `torch.nn.*` modules
-            nn.Linear(..., 4)  # num_classes = 4
+            nn.Linear(2, 128), # d = 2
+            nn.ReLU(),
+            # nn.Dropout(0.5),
+            nn.Linear(128, 128),
+            nn.Linear(128, 4)  # num_classes = 4
         )
 
     def transform_input(self, batch):
         # hardcode your transform here
+        print(batch[0])
+        min_val = torch.min(batch[0])
+        max_val = torch.max(batch[0])
+        batch = [(i - min_val) / (max_val - min_val) for i in batch[0]]
+        print(batch[0])
         return batch
 
     def configure_optimizers(self):
         # choose an optimizer from `torch.optim.*`
         # use `self.lr` to set the learning rate
+        self.lr = 1e-4
         # other parameters (e.g. momentum) may be hardcoded here
-        return torch.optim.<optim_name>(...)
+        return torch.optim.Adam(self.model.parameters(), self.lr)
 
 class LitDigitsClassifier(LitGenericClassifier):
     def __init__(self, lr=0):
         super().__init__(lr=lr)
+        
         self.model = nn.Sequential(
-            nn.Linear(64, ...), # d = 64
-            ..., # build your model here using `torch.nn.*` modules
-            nn.Linear(.., 10)   # num_classes = 10
+            nn.Linear(64, 128), # d = 64
+            # ..., # build your model here using `torch.nn.*` modules
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, 10)   # num_classes = 10
         )
     
     def transform_input(self, batch):
         # hardcode your transform here
+        print(batch[0])
+        min_val = torch.min(batch[0])
+        max_val = torch.max(batch[0])
+        batch[0] = [(i - min_val) / (max_val - min_val) for i in batch[0]]
+        print(batch[0])
         return batch
 
     def configure_optimizers(self):
         # choose an optimizer from `torch.optim.*`
         # use `self.lr` to set the learning rate
+        self.lr = 1e-3  
         # other parameters (e.g. momentum) may be hardcoded here
-        return torch.optim.<optim_name>(...)
+        return torch.optim.Adam(self.model.parameters(), self.lr)
