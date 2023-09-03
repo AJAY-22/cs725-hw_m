@@ -188,7 +188,7 @@ class LitSimpleClassifier(LitGenericClassifier):
 
     def transform_input(self, batch):
         # hardcode your transform here
-        print(batch[0])
+        print("=========================================================\n", batch[0])
         min_val = torch.min(batch[0])
         max_val = torch.max(batch[0])
         batch = [(i - min_val) / (max_val - min_val) for i in batch[0]]
