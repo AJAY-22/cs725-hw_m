@@ -227,6 +227,6 @@ class LitDigitsClassifier(LitGenericClassifier):
     def configure_optimizers(self):
         # choose an optimizer from `torch.optim.*`
         # use `self.lr` to set the learning rate
-        self.lr = 1e-3  
+        self.lr = 1e-4  
         # other parameters (e.g. momentum) may be hardcoded here
         return torch.optim.Adam(self.model.parameters(), self.lr)
